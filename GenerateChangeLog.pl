@@ -77,6 +77,7 @@ sub saveTagData{
 ########################### Process #####################################
 #####################################################################
 
+#git log --walk-reflogs --all  --pretty=tformat:"#COMMIT#%+gd%+d%+cd%+H%n subject:%s%n body:%b%n" --date=short --decorate=short
 @array = split(/#COMMIT#/, `git log --pretty=tformat:"#COMMIT#%+d%+cd%+H%n subject:%s%n body:%b%n" --date=short --decorate=short`);
 $pattern = '(.*)\n(\d{4})-(\d{2})-(\d{2})\n(\w*)\n subject: *\((' . join("|", @typeKeys) . ')\) (.*?) : *(.*?)\n body:(.*?)';
 
