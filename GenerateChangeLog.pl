@@ -65,7 +65,8 @@ sub saveTagData{
 			
 		# push table inside tag array
 		foreach $type (@typeKeys){
-			if( scalar @{$type}){
+			if( scalar @{$type}){			
+				#print("push : $prevTag.$type : @{$type}\n");
 				push(@{$prevTag.$type}, @{$type});
 				undef(@{$type});
 			}
@@ -77,35 +78,45 @@ sub saveTagData{
 ########################### Process #####################################
 #####################################################################
 
-#git log --walk-reflogs --all  --pretty=tformat:"#COMMIT#%+gd%+d%+cd%+H%n subject:%s%n body:%b%n" --date=short --decorate=short
-@array = split(/#COMMIT#/, `git log --pretty=tformat:"#COMMIT#%+d%+cd%+H%n subject:%s%n body:%b%n" --date=short --decorate=short`);
-$pattern = '(.*)\n(\d{4})-(\d{2})-(\d{2})\n(\w*)\n subject: *(' . join("|", @typeKeys) . ')\((.*?)\):(.*?)\n body:(.*?)';
+print "Git changelog generator\n";
+print "-----------------------\n";
+
+my $result = `git log --pretty=tformat:"#COMMIT#%+d%+cd%+H%n subject:%s%n body:%b%n" --date=short --decorate=short`;
+@array = split(/#COMMIT#/, $result);
+$patternGlobal = '(.*?)\n(\d{4})-(\d{2})-(\d{2})\n(\w*)\n subject:\s*(.*?)\n';
+#$patternMsg = '(' . join("|", @typeKeys) . ')\s*\((.*?)\)\s*:\s*(.*?)\n body:(.*?)';
+$patternMsg = '^(' . join("|", @typeKeys) . ')\s*\((.*?)\)\s*:\s*(.*)';
 
 foreach $line (@array){
-	if ($line =~ m/$pattern/i) {
+	if ($line =~ m/$patternGlobal/i) {
 		# --------------------
 		# Get Group values
 		$tag = getTag($1);
-		
 		initTag(\$tag);
-						
 		$hash = $5;
-		$type = lc $6;
-		$scope = lc $7;
-		$subjet = lc $8;
-		$body = $9;
-		# --------------------
-
+		
 		if($tag ne $prevTag){
+			# #print("Tag : $tag\n");
 			saveTagData();
 			$prevTag = $tag;
 			$date = "$4/$3/$2";
 		}
-
-		push(@{$type}, $subjet);
+		
+		# $tmp = $6;		
+		if ($6 =~ m/$patternMsg/i) {
+			# #print("6: $tmp\n");
+			# #print("good : $1, $2, $3\n");
+			$type = lc $1;
+			$scope = lc $2;
+			$subjet = lc $3;
+			
+			push(@{$type}, $subjet);
+		}
 	}
 	
-	last if $hash eq $stop;
+	if($stop){
+		last if $hash eq $stop;
+	}
 }
 
 saveTagData();
@@ -117,9 +128,10 @@ for($i = 0; $i < @tagArray; $i++){
 
 	foreach $type (@typeKeys){
 		@array = @{$tag.$type};
+		#print("$tag, $type : @array\n");
 		if ( scalar @array){
-			$type = ucfirst $types{$type};
-			print("\n$titleMd$type\n$enumMd ");
+			$typeName = ucfirst $types{$type};
+			print("\n$titleMd$typeName\n$enumMd ");
 			print(join("\n$enumMd ", @array));
 			print("\n");
 		}
